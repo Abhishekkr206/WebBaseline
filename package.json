@@ -1,0 +1,65 @@
+{
+  "name": "abhishek-webbaseline",
+  "displayName": "WebBaseline",
+  "description": "Highlights HTML/CSS features and shows their browser support.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:html",
+    "onLanguage:django-html",
+    "onLanguage:jinja-html",
+    "onLanguage:css",
+    "onLanguage:scss",
+    "onLanguage:less"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "baseline-checker.checkFile",
+        "title": "Baseline: Check Current File"
+      },
+      {
+        "command": "baseline-checker.clearHighlights",
+        "title": "Baseline: Clear Highlights"
+      }
+    ],
+    "configuration": {
+      "title": "Baseline Checker",
+      "properties": {
+        "baselineChecker.highlightEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable feature highlighting"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.104.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.36.0"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "compute-baseline": "^0.4.0",
+    "css-tree": "^2.3.1",
+    "dotenv": "^17.2.3",
+    "web-features": "^3.3.0"
+  }
+}
