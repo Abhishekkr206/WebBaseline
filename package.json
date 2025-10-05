@@ -1,8 +1,9 @@
 {
   "name": "abhishek-webbaseline",
   "displayName": "WebBaseline",
-  "description": "Highlights HTML/CSS features and shows their browser support.",
+  "description": "Highlights HTML/CSS features and shows their browser support with AI-powered alternatives.",
   "version": "0.0.1",
+  "publisher": "abhishekkr206",
   "engines": {
     "vscode": "^1.104.0"
   },
@@ -11,6 +12,15 @@
     "Programming Languages",
     "Other"
   ],
+  "icon": "assets/webBaseline.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abhishekkr206/WebBaseline"
+  },
+  "bugs": {
+    "url": "https://github.com/Abhishekkr206/WebBaseline/issues"
+  },
+  "homepage": "https://github.com/Abhishekkr206/WebBaseline",
   "activationEvents": [
     "onLanguage:html",
     "onLanguage:django-html",
@@ -29,6 +39,10 @@
       {
         "command": "baseline-checker.clearHighlights",
         "title": "Baseline: Clear Highlights"
+      },
+      {
+        "command": "baselineChecker.openChat",
+        "title": "Baseline: Open Chatbot"
       }
     ],
     "configuration": {

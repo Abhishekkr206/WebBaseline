@@ -13,6 +13,8 @@
   * **Newly available** (orange)
   * **Limited support** (red)
 
+![Highlight](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/screenshots/highlight.png)
+
 * **Hover Info**
   Hover over a CSS property or HTML tag to see:
 
@@ -20,11 +22,15 @@
   * Browser compatibility
   * “Get Alternatives” button for AI suggestions
 
+![Hover](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/screenshots/hover.png)
+
 * **AI Chatbot for Alternatives**
 
   * Powered by Google Gemini AI
   * Provides concise alternative solutions and minimal code examples
   * Handles follow-up questions with context
+
+![Chatbot](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/screenshots/chatbot.png)
 
 * **Commands**
 
