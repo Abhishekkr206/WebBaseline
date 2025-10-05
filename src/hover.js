@@ -1,33 +1,23 @@
 const vscode = require('vscode');
 const { getCssBcdKey, getHtmlBcdKey, getBcdStatus } = require('./highlight');
 
-function getBrowserIcon(browser) {
-  const icons = {
-    chrome: '🟢', firefox: '🟠', safari: '🔵', edge: '🔷', opera: '🔴',
-    brave: '🦁', samsung_internet: '📱', chrome_android: '🤖',
-    firefox_android: '🦊', safari_ios: '📱', webview_android: '🤖',
-    opera_android: '🔴', ie: '⚠️'
-  };
-  return icons[browser.toLowerCase()] || '⚪';
-}
-
 function getBrowserName(browser) {
   const names = {
-    chrome: 'Chrome', firefox: 'Firefox', safari: 'Safari', edge: 'Edge', opera: 'Opera',
-    brave: 'Brave', chrome_android: 'Chrome Android', firefox_android: 'Firefox Android',
-    safari_ios: 'Safari iOS', samsung_internet: 'Samsung Internet',
-    webview_android: 'WebView Android', opera_android: 'Opera Android', ie: 'Internet Explorer'
+    chrome: 'Chrome',
+    firefox: 'Firefox',
+    safari: 'Safari',
+    edge: 'Edge',
+    opera: 'Opera',
+    brave: 'Brave',
+    chrome_android: 'Chrome Android',
+    firefox_android: 'Firefox Android',
+    safari_ios: 'Safari iOS',
+    samsung_internet: 'Samsung',
+    webview_android: 'WebView',
+    opera_android: 'Opera Android',
+    ie: 'IE'
   };
   return names[browser] || browser;
-}
-
-function getBaselineStatus(baseline) {
-  const statuses = {
-    high: { icon: '✅', text: 'Widely Available' },
-    low: { icon: '🆕', text: 'Newly Available' },
-    false: { icon: '⚠️', text: 'Limited Availability' }
-  };
-  return statuses[baseline] || statuses.false;
 }
 
 function isSupported(version) {
@@ -71,50 +61,104 @@ function registerHoverProvider(context) {
           markdown.isTrusted = true;
           markdown.supportHtml = true;
 
-          markdown.appendMarkdown(`### ${featureType === 'css' ? '🎨' : '🏷️'} \`${word}\`\n`);
-          const baselineInfo = getBaselineStatus(status.baseline);
-          markdown.appendMarkdown(`**Baseline:** ${baselineInfo.icon} ${baselineInfo.text}\n`);
+          // Feature header
+          markdown.appendMarkdown(`### \`${word}\`\n\n`);
 
-          if (status.baseline_low_date) {
-            const date = new Date(status.baseline_low_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-            markdown.appendMarkdown(`*Available since: ${date}*\n`);
+          // Baseline status - clean and simple
+          let baselineText = '';
+          if (status.baseline === 'high') {
+            baselineText = '**✓ Widely supported**';
+          } else if (status.baseline === 'low') {
+            baselineText = '**⚡ Newly available**';
+          } else {
+            baselineText = '**⚠ Limited support**';
           }
+          
+          if (status.baseline_low_date) {
+            const date = new Date(status.baseline_low_date).toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'short' 
+            });
+            baselineText += ` · Since ${date}`;
+          }
+          markdown.appendMarkdown(baselineText + '\n\n');
 
+          // Browser support - organized and clean
           const support = status.support || {};
           const browsers = {
-            desktop: ['chrome', 'edge', 'firefox', 'safari', 'opera', 'ie'],
-            mobile: ['chrome_android', 'firefox_android', 'safari_ios', 'samsung_internet', 'opera_android']
+            desktop: ['chrome', 'edge', 'firefox', 'safari'],
+            mobile: ['chrome_android', 'safari_ios', 'firefox_android', 'samsung_internet']
           };
 
-          ['desktop', 'mobile'].forEach(type => {
-            markdown.appendMarkdown(`\n**${type === 'desktop' ? '🖥️ Desktop' : '📱 Mobile'} Browsers:**  \n`);
-            browsers[type].forEach(browser => {
-              const version = support[browser];
-              const icon = getBrowserIcon(browser);
-              const name = getBrowserName(browser);
-              if (isSupported(version)) {
-                const versionText = version === true ? 'All versions' : `${version}+`;
-                markdown.appendMarkdown(`${icon} **${name}**: ✅ ${versionText}  \n`);
-              } else {
-                markdown.appendMarkdown(`${icon} ~~**${name}**~~: ⚠️ Not supported  \n`);
-              }
-            });
+          const allUnsupported = [];
+
+          // Desktop browsers
+          const desktopSupported = [];
+          const desktopUnsupported = [];
+          browsers.desktop.forEach(browser => {
+            const version = support[browser];
+            const name = getBrowserName(browser);
+            
+            if (isSupported(version)) {
+              const versionText = version === true ? '' : ` ${version}+`;
+              desktopSupported.push(`${name}${versionText}`);
+            } else {
+              desktopUnsupported.push(name);
+              allUnsupported.push(browser);
+            }
           });
 
-          // Add "Get Alternatives & Polyfills" button if any browser is unsupported
-          const unsupportedBrowsers = Object.keys(support).filter(b => !isSupported(support[b]));
-          if (status.baseline === 'low' || status.baseline === false || unsupportedBrowsers.length > 0) {
+          markdown.appendMarkdown(`**Desktop:** `);
+          if (desktopSupported.length > 0) {
+            markdown.appendMarkdown(desktopSupported.join(', '));
+          }
+          if (desktopUnsupported.length > 0) {
+            markdown.appendMarkdown(desktopSupported.length > 0 ? ` · ` : '');
+            markdown.appendMarkdown(`~~${desktopUnsupported.join(', ')}~~`);
+          }
+          markdown.appendMarkdown('\n\n');
+
+          // Mobile browsers
+          const mobileSupported = [];
+          const mobileUnsupported = [];
+          browsers.mobile.forEach(browser => {
+            const version = support[browser];
+            const name = getBrowserName(browser);
+            
+            if (isSupported(version)) {
+              const versionText = version === true ? '' : ` ${version}+`;
+              mobileSupported.push(`${name}${versionText}`);
+            } else {
+              mobileUnsupported.push(name);
+              allUnsupported.push(browser);
+            }
+          });
+
+          markdown.appendMarkdown(`**Mobile:** `);
+          if (mobileSupported.length > 0) {
+            markdown.appendMarkdown(mobileSupported.join(', '));
+          }
+          if (mobileUnsupported.length > 0) {
+            markdown.appendMarkdown(mobileSupported.length > 0 ? ` · ` : '');
+            markdown.appendMarkdown(`~~${mobileUnsupported.join(', ')}~~`);
+          }
+          markdown.appendMarkdown('\n\n');
+
+          // Add alternatives button only if there are actual issues
+          const hasIssues = status.baseline === 'low' || 
+                           status.baseline === false || 
+                           allUnsupported.length > 0;
+
+          if (hasIssues) {
             const args = {
               feature: word,
               type: featureType,
               baseline: status.baseline,
-              unsupportedBrowsers
+              unsupportedBrowsers: allUnsupported
             };
             const commandUri = `command:baselineChecker.getAlternatives?${encodeURIComponent(JSON.stringify(args))}`;
-            markdown.appendMarkdown(`[🤖 Get Alternatives ](${commandUri})  \n`);
+            markdown.appendMarkdown(`[Get Alternatives →](${commandUri})\n\n`);
           }
-
-          markdown.appendMarkdown(`\n*Data from [Browser Compat Data](https://github.com/mdn/browser-compat-data)*`);
 
           return new vscode.Hover(markdown, wordRange);
         } catch (err) {

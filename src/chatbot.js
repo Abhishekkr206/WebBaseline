@@ -237,7 +237,12 @@ function showChatPanel(context, feature, type, content) {
 /**
  * Generate webview HTML content
  */
+/**
+ * Generate webview HTML content - Simple & Modern
+ */
 function getWebviewContent(feature, type, content, color) {
+  const accent = color.split(',')[0].trim();
+  
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -245,146 +250,256 @@ function getWebviewContent(feature, type, content, color) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escapeHtml(feature)}</title>
 <style>
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
+
 body { 
-  font-family: var(--vscode-font-family); 
-  color: var(--vscode-foreground); 
-  background-color: var(--vscode-editor-background); 
-  padding: 0;
-  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
   display: flex;
   flex-direction: column;
   height: 100vh;
 }
-.content-area {
+
+.header {
+  padding: 20px 24px;
+  border-bottom: 2px solid ${accent};
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: ${accent};
+  color: white;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 24px;
+}
+
+.message {
+  margin-bottom: 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.question {
+  background: ${accent};
+  color: white;
+  padding: 10px 16px;
+  border-radius: 18px;
+  display: inline-block;
+  margin-bottom: 12px;
+  max-width: 80%;
+}
+
+.answer {
   line-height: 1.6;
 }
-h1, h2, h3 { margin-top: 16px; margin-bottom: 8px; }
-pre { 
-  background: var(--vscode-textBlockQuote-background); 
-  padding: 12px; 
-  border-radius: 6px; 
-  overflow-x: auto; 
+
+.answer h1, .answer h2, .answer h3 {
+  margin: 20px 0 10px;
+  font-weight: 600;
 }
-code { 
-  background: var(--vscode-textBlockQuote-background); 
-  padding: 2px 4px; 
-  border-radius: 3px; 
+
+.answer h2 { font-size: 20px; }
+.answer h3 { font-size: 16px; }
+
+.answer p {
+  margin: 12px 0;
 }
-.header { 
-  background: linear-gradient(135deg, ${color}); 
-  color: white; 
-  padding: 16px; 
-  border-radius: 6px; 
-  margin-bottom: 16px; 
-}
-.header h1 { margin: 0; font-size: 1.5em; }
-.header .badge {
-  background: rgba(255, 255, 255, 0.3);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  margin-left: 8px;
-}
-.chat-item {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--vscode-panel-border);
-}
-.user-question {
-  // background: var(--vscode-input-background);
-  background: #111111;
-  padding: 10px 12px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  border-left: 3px solid ${color.split(',')[0]};
-}
-.input-container {
+
+.answer pre {
+  background: var(--vscode-textBlockQuote-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
   padding: 16px;
-  border-top: 1px solid var(--vscode-panel-border);
-  display: flex;
-  gap: 8px;
+  overflow-x: auto;
+  margin: 16px 0;
 }
-#questionInput {
+
+.answer code {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.answer pre code {
+  background: none;
+  padding: 0;
+}
+
+.answer :not(pre) > code {
+  background: var(--vscode-textBlockQuote-background);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: ${accent};
+}
+
+.answer strong {
+  font-weight: 600;
+}
+
+.answer a {
+  color: ${accent};
+  text-decoration: none;
+}
+
+.answer a:hover {
+  text-decoration: underline;
+}
+
+.loading {
+  display: none;
+  text-align: center;
+  padding: 20px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.input-area {
+  border-top: 1px solid var(--vscode-panel-border);
+  padding: 16px 24px;
+  display: flex;
+  gap: 10px;
+}
+
+#input {
   flex: 1;
   background: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
   border: 1px solid var(--vscode-input-border);
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
 }
-#askBtn {
-  background: linear-gradient(135deg, ${color});
+
+#input:focus {
+  border-color: ${accent};
+}
+
+#send {
+  background: ${accent};
   color: white;
   border: none;
   padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
 }
-#askBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-.loading { display: none; text-align: center; padding: 20px; color: var(--vscode-descriptionForeground); }
+
+#send:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+#send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { 
+  background: var(--vscode-scrollbarSlider-background);
+  border-radius: 4px;
+}
 </style>
 </head>
 <body>
-<div class="content-area">
-  <div class="header">
-    <h1><code>${escapeHtml(feature)}</code><span class="badge">${type.toUpperCase()}</span></h1>
+
+<div class="header">
+  <span class="badge">${type.toUpperCase()}</span>
+  <span class="title">${escapeHtml(feature)}</span>
+</div>
+
+<div class="content" id="content">
+  <div class="message">
+    <div class="answer">${convertMarkdownToHtml(content)}</div>
   </div>
-  <div id="content">${convertMarkdownToHtml(content)}</div>
   <div class="loading" id="loading">Thinking...</div>
 </div>
-<div class="input-container">
-  <input type="text" id="questionInput" placeholder="Ask a follow-up question..." />
-  <button id="askBtn" onclick="askQuestion()">Ask</button>
+
+<div class="input-area">
+  <input 
+    type="text" 
+    id="input" 
+    placeholder="Ask a question..."
+  />
+  <button id="send">Send</button>
 </div>
 
 <script>
 const vscode = acquireVsCodeApi();
 
-document.getElementById('questionInput').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') askQuestion();
+document.getElementById('input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') send();
 });
 
-function askQuestion() {
-  const input = document.getElementById('questionInput');
+document.getElementById('send').addEventListener('click', send);
+
+function send() {
+  const input = document.getElementById('input');
   const text = input.value.trim();
   if (!text) return;
 
   vscode.postMessage({ command: 'askQuestion', text });
   input.value = '';
   input.disabled = true;
-  document.getElementById('askBtn').disabled = true;
+  document.getElementById('send').disabled = true;
 }
 
 window.addEventListener('message', event => {
-  const msg = event.data;
+  const { command, question, text } = event.data;
   const content = document.getElementById('content');
   const loading = document.getElementById('loading');
-  const input = document.getElementById('questionInput');
-  const btn = document.getElementById('askBtn');
+  const input = document.getElementById('input');
+  const send = document.getElementById('send');
 
-  if (msg.command === 'showLoading') {
+  if (command === 'showLoading') {
     loading.style.display = 'block';
-  } else if (msg.command === 'appendContent') {
+  } 
+  else if (command === 'appendContent') {
     loading.style.display = 'none';
-    const item = document.createElement('div');
-    item.className = 'chat-item';
-    item.innerHTML = '<div class="user-question"><strong>You:</strong> ' + escapeHtml(msg.question) + '</div>' +
-                     '<div>' + convertMarkdown(msg.text) + '</div>';
-    content.appendChild(item);
-    content.parentElement.scrollTop = content.parentElement.scrollHeight;
+    
+    const msg = document.createElement('div');
+    msg.className = 'message';
+    msg.innerHTML = \`
+      <div class="question">\${escapeHtml(question)}</div>
+      <div class="answer">\${convertMarkdown(text)}</div>
+    \`;
+    content.appendChild(msg);
+    content.scrollTop = content.scrollHeight;
+    
     input.disabled = false;
-    btn.disabled = false;
+    send.disabled = false;
     input.focus();
-  } else if (msg.command === 'showError') {
+  } 
+  else if (command === 'showError') {
     loading.style.display = 'none';
-    const item = document.createElement('div');
-    item.innerHTML = '<p style="color: var(--vscode-errorForeground);">Error: ' + escapeHtml(msg.text) + '</p>';
-    content.appendChild(item);
+    alert('Error: ' + text);
     input.disabled = false;
-    btn.disabled = false;
+    send.disabled = false;
   }
 });
 
