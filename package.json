@@ -3,7 +3,7 @@
   "displayName": "WebBaseline",
   "description": "Highlights HTML/CSS features and shows their browser support with AI-powered alternatives.",
   "version": "0.0.1",
-  "publisher": "abhishekkr206",
+  "publisher": "Abhishekkr",
   "engines": {
     "vscode": "^1.104.0"
   },
