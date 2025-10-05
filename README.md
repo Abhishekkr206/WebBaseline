@@ -42,11 +42,11 @@
 
 3. Open in VS Code and press F5 to launch the extension in a new VS Code window.
 
-Configuration
+## Configuration
 
 You can enable/disable feature highlighting in VS Code settings: "baselineChecker.highlightEnabled": true
 
-Architecture
+## Architecture
 src/
 ├─ extension.js → Entry point; activates extension, registers commands
 ├─ highlight.js → Scans file & highlights CSS/HTML features
