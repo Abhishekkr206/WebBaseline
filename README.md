@@ -1,65 +1,54 @@
-# abhishek-webbaseline README
+# WebBaseline - VS Code Extension
 
-This is the README for your extension "abhishek-webbaseline". After writing up a brief description, we recommend including the following sections.
-
-## Features
-
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+**WebBaseline** highlights HTML and CSS features in your editor, shows their browser support, and provides AI-powered alternatives with code examples via a built-in chatbot.
 
 ---
 
-## Working with Markdown
+## 🚀 Features
 
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
+- **Automatic Feature Highlighting**  
+  Highlights CSS properties and HTML elements in three categories:
+  - **Widely supported** (green)
+  - **Newly available** (orange)
+  - **Limited support** (red)
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
+- **Hover Info**  
+  Hover over a CSS property or HTML tag to see:
+  - Baseline support level
+  - Browser compatibility
+  - “Get Alternatives” button for AI suggestions
 
-## For more information
+- **AI Chatbot for Alternatives**  
+  - Powered by Google Gemini AI
+  - Provides concise alternative solutions and minimal code examples
+  - Handles follow-up questions with context
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+- **Commands**  
+  - `Baseline: Check Current File` → Run highlighting manually  
+  - `Baseline: Clear Highlights` → Remove all highlights  
+  - `Open Chat` → Ask the chatbot about a feature  
 
-**Enjoy!**
+---
+
+## 🛠 Installation
+
+1. Clone this repository:
+   ```bash
+    git clone https://github.com/yourusername/abhishek-webbaseline.git
+
+2. Install dependencies:
+    cd abhishek-webbaseline
+    npm install
+
+3. Open in VS Code and press F5 to launch the extension in a new VS Code window.
+
+Configuration
+
+You can enable/disable feature highlighting in VS Code settings: "baselineChecker.highlightEnabled": true
+
+Architecture
+src/
+├─ extension.js → Entry point; activates extension, registers commands
+├─ highlight.js → Scans file & highlights CSS/HTML features
+├─ hover.js → Shows baseline & browser support on hover
+└─ chatbot.js → Connects to Gemini AI & manages chat panel
