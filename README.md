@@ -13,7 +13,7 @@
   * **Newly available** (orange)
   * **Limited support** (red)
 
-![Highlight](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/screenshots/highlight.png)
+![Highlight](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/assets/highlight.png)
 
 * **Hover Info**
   Hover over a CSS property or HTML tag to see:
@@ -22,7 +22,7 @@
   * Browser compatibility
   * “Get Alternatives” button for AI suggestions
 
-![Hover](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/screenshots/hover.png)
+![Hover](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/assets/hover.png)
 
 * **AI Chatbot for Alternatives**
 
@@ -30,7 +30,7 @@
   * Provides concise alternative solutions and minimal code examples
   * Handles follow-up questions with context
 
-![Chatbot](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/screenshots/chatbot.png)
+![Chatbot](https://raw.githubusercontent.com/Abhishekkr206/WebBaseline/main/assets/chatbot.png)
 
 * **Commands**
 
