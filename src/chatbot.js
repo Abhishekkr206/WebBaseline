@@ -18,8 +18,6 @@ require('dotenv').config();
 let chatPanel = null;
 let chatHistory = [];
 
-// ⚠️ Inline API key — works for dev/demo.
-// For public repositories, use: process.env.GEMINI_API_KEY
 const API_KEY = 'AIzaSyAEA3HxaPsozbehkgV4jpoKbj3l6L5Ls1Q';
 
 /**
