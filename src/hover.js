@@ -1,6 +1,11 @@
+// ---------------- Imports ----------------
 const vscode = require('vscode');
 const { getCssBcdKey, getHtmlBcdKey, getBcdStatus } = require('./highlight');
 
+// ---------------- Utility: Browser name mapping ----------------
+/**
+ * Converts internal browser keys to human-friendly names.
+ */
 function getBrowserName(browser) {
   const names = {
     chrome: 'Chrome',
@@ -12,7 +17,7 @@ function getBrowserName(browser) {
     chrome_android: 'Chrome Android',
     firefox_android: 'Firefox Android',
     safari_ios: 'Safari iOS',
-    samsung_internet: 'Samsung',
+    samsung_internet: 'Samsung Internet',
     webview_android: 'WebView',
     opera_android: 'Opera Android',
     ie: 'IE'
@@ -20,30 +25,50 @@ function getBrowserName(browser) {
   return names[browser] || browser;
 }
 
+/**
+ * Returns true if the browser version indicates support.
+ */
 function isSupported(version) {
   return version !== false && version != null;
 }
 
+// ---------------- Register Hover Provider ----------------
+/**
+ * Registers a hover provider for HTML/CSS files.
+ * When the user hovers over a feature (tag or property),
+ * it shows baseline support info and browser compatibility.
+ */
 function registerHoverProvider(context) {
   const provider = vscode.languages.registerHoverProvider(
     ['css', 'scss', 'less', 'html', 'django-html', 'jinja-html'],
     {
+      /**
+       * Main hover function.
+       * Detects the feature under the cursor and builds a markdown hover tooltip.
+       */
       provideHover(document, position) {
         let wordRange, word, bcdKey, featureType;
 
+        // ---------- CSS / SCSS / LESS ----------
         if (['css', 'scss', 'less'].includes(document.languageId)) {
+          // Match CSS property or variable name
           wordRange = document.getWordRangeAtPosition(position, /[@:]?[\w-]+/);
           if (!wordRange) return null;
+
           word = document.getText(wordRange);
           bcdKey = getCssBcdKey(word);
           featureType = 'css';
-        } else if (document.languageId.includes('html')) {
+        } 
+        // ---------- HTML and Template Languages ----------
+        else if (document.languageId.includes('html')) {
           wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z][\w-]*/);
           if (!wordRange) return null;
-          word = document.getText(wordRange);
 
+          word = document.getText(wordRange);
           const line = document.lineAt(position.line).text;
           const charPos = position.character;
+
+          // Check if cursor is inside an HTML tag
           let open = line.lastIndexOf('<', charPos);
           let close = line.indexOf('>', charPos);
           if (open === -1 || close === -1 || charPos < open || charPos > close) return null;
@@ -52,19 +77,21 @@ function registerHoverProvider(context) {
           featureType = 'html';
         }
 
+        // ---------- No feature found ----------
         if (!bcdKey) return null;
         const status = getBcdStatus(bcdKey);
         if (!status) return null;
 
+        // ---------- Build hover tooltip ----------
         try {
           const markdown = new vscode.MarkdownString();
           markdown.isTrusted = true;
           markdown.supportHtml = true;
 
-          // Feature header
+          // Title (Feature name)
           markdown.appendMarkdown(`### \`${word}\`\n\n`);
 
-          // Baseline status - clean and simple
+          // ---------- Baseline status ----------
           let baselineText = '';
           if (status.baseline === 'high') {
             baselineText = '**✓ Widely supported**';
@@ -73,7 +100,8 @@ function registerHoverProvider(context) {
           } else {
             baselineText = '**⚠ Limited support**';
           }
-          
+
+          // Add baseline date if available
           if (status.baseline_low_date) {
             const date = new Date(status.baseline_low_date).toLocaleDateString('en-US', { 
               year: 'numeric', 
@@ -83,7 +111,7 @@ function registerHoverProvider(context) {
           }
           markdown.appendMarkdown(baselineText + '\n\n');
 
-          // Browser support - organized and clean
+          // ---------- Browser support section ----------
           const support = status.support || {};
           const browsers = {
             desktop: ['chrome', 'edge', 'firefox', 'safari'],
@@ -98,7 +126,7 @@ function registerHoverProvider(context) {
           browsers.desktop.forEach(browser => {
             const version = support[browser];
             const name = getBrowserName(browser);
-            
+
             if (isSupported(version)) {
               const versionText = version === true ? '' : ` ${version}+`;
               desktopSupported.push(`${name}${versionText}`);
@@ -109,9 +137,7 @@ function registerHoverProvider(context) {
           });
 
           markdown.appendMarkdown(`**Desktop:** `);
-          if (desktopSupported.length > 0) {
-            markdown.appendMarkdown(desktopSupported.join(', '));
-          }
+          if (desktopSupported.length > 0) markdown.appendMarkdown(desktopSupported.join(', '));
           if (desktopUnsupported.length > 0) {
             markdown.appendMarkdown(desktopSupported.length > 0 ? ` · ` : '');
             markdown.appendMarkdown(`~~${desktopUnsupported.join(', ')}~~`);
@@ -124,7 +150,7 @@ function registerHoverProvider(context) {
           browsers.mobile.forEach(browser => {
             const version = support[browser];
             const name = getBrowserName(browser);
-            
+
             if (isSupported(version)) {
               const versionText = version === true ? '' : ` ${version}+`;
               mobileSupported.push(`${name}${versionText}`);
@@ -135,19 +161,17 @@ function registerHoverProvider(context) {
           });
 
           markdown.appendMarkdown(`**Mobile:** `);
-          if (mobileSupported.length > 0) {
-            markdown.appendMarkdown(mobileSupported.join(', '));
-          }
+          if (mobileSupported.length > 0) markdown.appendMarkdown(mobileSupported.join(', '));
           if (mobileUnsupported.length > 0) {
             markdown.appendMarkdown(mobileSupported.length > 0 ? ` · ` : '');
             markdown.appendMarkdown(`~~${mobileUnsupported.join(', ')}~~`);
           }
           markdown.appendMarkdown('\n\n');
 
-          // Add alternatives button only if there are actual issues
+          // ---------- Add "Get Alternatives" button ----------
           const hasIssues = status.baseline === 'low' || 
-                           status.baseline === false || 
-                           allUnsupported.length > 0;
+                            status.baseline === false || 
+                            allUnsupported.length > 0;
 
           if (hasIssues) {
             const args = {
@@ -160,6 +184,7 @@ function registerHoverProvider(context) {
             markdown.appendMarkdown(`[Get Alternatives →](${commandUri})\n\n`);
           }
 
+          // Return the hover tooltip
           return new vscode.Hover(markdown, wordRange);
         } catch (err) {
           console.error('Error creating hover:', err);
@@ -169,7 +194,9 @@ function registerHoverProvider(context) {
     }
   );
 
+  // Register provider for cleanup on deactivation
   context.subscriptions.push(provider);
 }
 
+// ---------------- Exports ----------------
 module.exports = { registerHoverProvider };

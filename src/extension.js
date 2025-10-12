@@ -1,19 +1,24 @@
 const vscode = require('vscode');
 const { highlightFeatures, clearHighlights } = require('./highlight');
 const { registerHoverProvider } = require('./hover');
-const { getAlternatives, openChatbot } = require('./chatbot'); // Add this line
+const { getAlternatives, openChatbot } = require('./chatbot');
 
 /**
- * @param {vscode.ExtensionContext} context
+ * @function activate
+ * @description Called when the extension is activated (e.g., VS Code starts or a relevant file is opened)
+ * @param {vscode.ExtensionContext} context - VS Code extension context
  */
 function activate(context) {
   console.log('🚀 Baseline extension is now active!');
 
   try {
-    // Register hover provider FIRST
+    // Register hover provider (used to show tooltips for unsupported features)
     registerHoverProvider(context);
 
-    // Highlight command - FIXED to match package.json
+    /**
+     * Command: Highlight unsupported or special features in the active file
+     * Triggered by: "baseline-checker.checkFile"
+     */
     const highlightDisposable = vscode.commands.registerCommand('baseline-checker.checkFile', () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
@@ -22,7 +27,10 @@ function activate(context) {
       }
     });
 
-    // Clear highlights command - FIXED to match package.json
+    /**
+     * Command: Clear all highlights from the active file
+     * Triggered by: "baseline-checker.clearHighlights"
+     */
     const clearDisposable = vscode.commands.registerCommand('baseline-checker.clearHighlights', () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
@@ -31,7 +39,10 @@ function activate(context) {
       }
     });
 
-    // Get alternatives command (from hover + manual)
+    /**
+     * Command: Get feature alternatives (manual trigger or from hover)
+     * Triggered by: "baselineChecker.getAlternatives"
+     */
     const alternativesDisposable = vscode.commands.registerCommand('baselineChecker.getAlternatives', (args) => {
       console.log('🤖 getAlternatives command called with args:', args);
       try {
@@ -42,7 +53,10 @@ function activate(context) {
       }
     });
 
-    // Open chatbot command
+    /**
+     * Command: Open chatbot for feature explanation/help
+     * Triggered by: "baselineChecker.openChat"
+     */
     const chatDisposable = vscode.commands.registerCommand('baselineChecker.openChat', async () => {
       const feature = await vscode.window.showInputBox({
         prompt: 'Enter the CSS/HTML feature you want help with',
@@ -51,6 +65,7 @@ function activate(context) {
       if (feature) openChatbot(context, feature);
     });
 
+    // Add all command disposables to context for cleanup
     context.subscriptions.push(
       highlightDisposable,
       clearDisposable,
@@ -58,7 +73,11 @@ function activate(context) {
       chatDisposable
     );
 
-    // Auto-highlight on file open or text change
+    /**
+     * Auto-run highlight when:
+     * - Active editor changes (user switches files)
+     * - File content changes (user types or edits)
+     */
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor) {
         console.log('Editor changed to:', editor.document.languageId);
@@ -69,11 +88,12 @@ function activate(context) {
     vscode.workspace.onDidChangeTextDocument(event => {
       const editor = vscode.window.activeTextEditor;
       if (editor && event.document === editor.document) {
+        // Add small delay to avoid excessive re-highlighting
         setTimeout(() => highlightFeatures(editor), 500);
       }
     }, null, context.subscriptions);
 
-    // Highlight current file on activation
+    // Run highlight immediately if a file is already open
     const currentEditor = vscode.window.activeTextEditor;
     if (currentEditor) {
       console.log('Initial highlight for:', currentEditor.document.languageId);
@@ -83,7 +103,7 @@ function activate(context) {
     console.log('✅ Baseline extension fully activated!');
     console.log('Registered commands:', [
       'baseline-checker.checkFile',
-      'baseline-checker.clearHighlights', 
+      'baseline-checker.clearHighlights',
       'baselineChecker.getAlternatives',
       'baselineChecker.openChat'
     ]);
@@ -94,7 +114,8 @@ function activate(context) {
 }
 
 /**
- * @description Clean up on extension deactivation
+ * @function deactivate
+ * @description Cleans up highlights and logs when the extension is deactivated
  */
 function deactivate() {
   try {

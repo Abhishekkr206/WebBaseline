@@ -1,13 +1,29 @@
+// ============================================================================
+// 🌐 Gemini Chat Integration for Baseline Checker (VS Code Extension)
+// ============================================================================
+// Provides AI-powered feature analysis and interactive chat for CSS/HTML.
+// Uses Google Generative AI (Gemini) to suggest alternatives and examples.
+// ----------------------------------------------------------------------------
+// ⚙️ Key features:
+// - Fetch alternatives via Gemini
+// - Interactive Q&A chat window
+// - Markdown → HTML conversion for VSCode WebView
+// - Lightweight + easy to extend
+// ============================================================================
+
 const vscode = require('vscode');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
 let chatPanel = null;
-const API_KEY = 'AIzaSyAEA3HxaPsozbehkgV4jpoKbj3l6L5Ls1Q'; 
-let chatHistory = []; // Store context efficiently
+let chatHistory = [];
+
+// ⚠️ Inline API key — works for dev/demo.
+// For public repositories, use: process.env.GEMINI_API_KEY
+const API_KEY = 'AIzaSyAEA3HxaPsozbehkgV4jpoKbj3l6L5Ls1Q';
 
 /**
- * Escape HTML to prevent XSS attacks
+ * Escape HTML safely (prevents XSS attacks inside WebView)
  */
 function escapeHtml(text) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
@@ -15,34 +31,28 @@ function escapeHtml(text) {
 }
 
 /**
- * Create chat session with context
+ * Create a Gemini chat session with optional context
+ * Keeps model responses concise and relevant.
  */
 async function createChatSession(initialContext) {
   const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash-lite',
-    generationConfig: { 
-      temperature: 0.7, 
-      maxOutputTokens: 600 // Reduced for efficiency
-    }
+    generationConfig: { temperature: 0.7, maxOutputTokens: 600 }
   });
-  
-  // Start with system context
+
   const session = model.startChat({
-    history: initialContext ? [{
-      role: 'user',
-      parts: [{ text: initialContext }]
-    }, {
-      role: 'model',
-      parts: [{ text: 'I understand. I\'ll provide concise, focused help.' }]
-    }] : []
+    history: initialContext ? [
+      { role: 'user', parts: [{ text: initialContext }] },
+      { role: 'model', parts: [{ text: "Understood. I'll provide concise help." }] }
+    ] : []
   });
-  
+
   return session;
 }
 
 /**
- * Get alternatives from Gemini AI
+ * Main AI command — Get browser-safe alternatives for a CSS/HTML feature
  */
 async function getAlternatives(context, args) {
   if (!args?.feature) {
@@ -61,10 +71,9 @@ async function getAlternatives(context, args) {
       const unsupportedList = unsupportedBrowsers.length ? unsupportedBrowsers.join(', ') : 'None';
       const baselineMap = { high: 'Widely Available', low: 'Newly Available', default: 'Limited' };
       const baselineText = baselineMap[baseline] || baselineMap.default;
-      
-      // Compact, focused prompt
+
       const systemContext = `You're a web dev expert. Give SHORT, practical answers only.`;
-      
+
       const prompt = `Feature: "${feature}" (${type.toUpperCase()})
 Support: ${baselineText} | Unsupported: ${unsupportedList}
 
@@ -75,18 +84,15 @@ Provide:
 
 Format: markdown. Be brief.`;
 
-      // Store context for follow-ups
-      chatHistory = [
-        { feature, type, baseline: baselineText, unsupported: unsupportedList }
-      ];
+      chatHistory = [{ feature, type, baseline: baselineText, unsupported: unsupportedList }];
 
       const session = await createChatSession(systemContext);
       const result = await session.sendMessage(prompt);
       const text = result.response.text();
 
-      // Save session for follow-ups
+      // Store session for follow-up questions
       chatHistory.push({ session, initialResponse: text });
-      
+
       showChatPanel(context, feature, type, text);
 
     } catch (err) {
@@ -97,7 +103,7 @@ Format: markdown. Be brief.`;
 }
 
 /**
- * Open chatbot interface
+ * Opens chatbot manually — asks for a feature and runs analysis
  */
 async function openChatbot(context, featureInput, typeInput) {
   try {
@@ -105,7 +111,6 @@ async function openChatbot(context, featureInput, typeInput) {
       prompt: 'Enter CSS/HTML feature',
       placeHolder: 'e.g., grid-template-columns'
     });
-    
     if (!feature) return;
 
     let type = typeInput;
@@ -124,18 +129,18 @@ async function openChatbot(context, featureInput, typeInput) {
 }
 
 /**
- * Handle follow-up questions with context awareness
+ * Handle follow-up user questions using active Gemini chat session
  */
 async function handleUserQuestion(question) {
   try {
     const session = chatHistory[chatHistory.length - 1]?.session;
-    if (!session) throw new Error('No active session');
+    if (!session) throw new Error('No active chat session found');
 
-    // Add context hint for very short questions
-    const contextualQuestion = question.length < 15 
+    // If question is short, add context automatically
+    const contextualQuestion = question.length < 15
       ? `Regarding ${chatHistory[0].feature}: ${question}`
       : question;
-    
+
     const result = await session.sendMessage(contextualQuestion + '\n\nKeep response under 300 words.');
     return result.response.text();
   } catch (err) {
@@ -145,24 +150,24 @@ async function handleUserQuestion(question) {
 }
 
 /**
- * Convert Markdown to HTML (optimized)
+ * Convert Markdown → Safe HTML for VSCode WebView
  */
 function convertMarkdownToHtml(markdown) {
   if (!markdown) return '';
-  
+
   const codeBlocks = [];
   const inlineCodes = [];
-  
+
   let processed = markdown
-    .replace(/```[\s\S]*?```/g, (match) => {
-      codeBlocks.push(match);
+    .replace(/```[\s\S]*?```/g, (m) => {
+      codeBlocks.push(m);
       return `__CB${codeBlocks.length - 1}__`;
     })
-    .replace(/`[^`\n]+`/g, (match) => {
-      inlineCodes.push(match);
+    .replace(/`[^`\n]+`/g, (m) => {
+      inlineCodes.push(m);
       return `__IC${inlineCodes.length - 1}__`;
     });
-  
+
   let html = processed
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -171,7 +176,7 @@ function convertMarkdownToHtml(markdown) {
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
     .replace(/\n/g, '<br>');
-  
+
   html = html.replace(/__CB(\d+)__/g, (_, i) => {
     const match = codeBlocks[i].match(/```(\w+)?\n?([\s\S]*?)```/);
     if (match) {
@@ -180,21 +185,21 @@ function convertMarkdownToHtml(markdown) {
     }
     return escapeHtml(codeBlocks[i]);
   });
-  
+
   html = html.replace(/__IC(\d+)__/g, (_, i) => {
     const code = inlineCodes[i].slice(1, -1);
     return `<code>${escapeHtml(code)}</code>`;
   });
-  
+
   return html;
 }
 
 /**
- * Show chat panel with response
+ * Show (or update) chat panel inside VS Code
  */
 function showChatPanel(context, feature, type, content) {
   const color = type === 'html' ? '#e74c3c, #c0392b' : '#667eea, #764ba2';
-  
+
   if (!chatPanel) {
     chatPanel = vscode.window.createWebviewPanel(
       'baselineChat',
@@ -203,9 +208,9 @@ function showChatPanel(context, feature, type, content) {
       { enableScripts: true, retainContextWhenHidden: true }
     );
 
-    chatPanel.onDidDispose(() => { 
+    chatPanel.onDidDispose(() => {
       chatPanel = null;
-      chatHistory = []; // Clear context on close
+      chatHistory = [];
     });
 
     chatPanel.webview.onDidReceiveMessage(async message => {
@@ -213,15 +218,15 @@ function showChatPanel(context, feature, type, content) {
         try {
           chatPanel.webview.postMessage({ command: 'showLoading' });
           const response = await handleUserQuestion(message.text);
-          chatPanel.webview.postMessage({ 
-            command: 'appendContent', 
+          chatPanel.webview.postMessage({
+            command: 'appendContent',
             question: message.text,
-            text: response 
+            text: response
           });
         } catch (err) {
-          chatPanel.webview.postMessage({ 
-            command: 'showError', 
-            text: err.message 
+          chatPanel.webview.postMessage({
+            command: 'showError',
+            text: err.message
           });
         }
       }
@@ -235,238 +240,96 @@ function showChatPanel(context, feature, type, content) {
 }
 
 /**
- * Generate webview HTML content
- */
-/**
- * Generate webview HTML content - Simple & Modern
+ * Generate full WebView HTML + CSS (modern, minimal UI)
  */
 function getWebviewContent(feature, type, content, color) {
   const accent = color.split(',')[0].trim();
-  
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escapeHtml(feature)}</title>
+
 <style>
-* { 
-  box-sizing: border-box; 
-  margin: 0; 
-  padding: 0; 
-}
+/* ------------------- BASIC LAYOUT ------------------- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: var(--vscode-editor-background);
+  color: var(--vscode-foreground); display: flex; flex-direction: column; height: 100vh; }
 
-body { 
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--vscode-editor-background);
-  color: var(--vscode-foreground);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+/* ------------------- HEADER ------------------- */
+.header { padding: 20px 24px; border-bottom: 2px solid ${accent};
+  display: flex; align-items: center; gap: 12px; }
+.badge { font-size: 11px; font-weight: 600; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 6px; background: ${accent}; color: white; }
+.title { font-size: 18px; font-weight: 500; font-family: monospace; }
 
-.header {
-  padding: 20px 24px;
-  border-bottom: 2px solid ${accent};
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+/* ------------------- CONTENT ------------------- */
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+.message { margin-bottom: 24px; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); } }
 
-.badge {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: ${accent};
-  color: white;
-}
+.question { background: ${accent}; color: white; padding: 10px 16px; border-radius: 18px;
+  display: inline-block; margin-bottom: 12px; max-width: 80%; }
 
-.title {
-  font-size: 18px;
-  font-weight: 500;
-  font-family: monospace;
-}
+.answer { line-height: 1.6; }
+.answer h2, .answer h3 { margin: 20px 0 10px; font-weight: 600; }
+.answer pre { background: var(--vscode-textBlockQuote-background); 
+  border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 16px;
+  overflow-x: auto; margin: 16px 0; }
+.answer code { font-family: monospace; font-size: 13px; }
+.answer strong { font-weight: 600; }
+.answer a { color: ${accent}; text-decoration: none; }
+.answer a:hover { text-decoration: underline; }
 
-.content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-}
+/* ------------------- INPUT AREA ------------------- */
+.input-area { border-top: 1px solid var(--vscode-panel-border); padding: 16px 24px;
+  display: flex; gap: 10px; }
+#input { flex: 1; background: var(--vscode-input-background); color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border); padding: 10px 14px; border-radius: 8px;
+  font-size: 14px; outline: none; }
+#input:focus { border-color: ${accent}; }
+#send { background: ${accent}; color: white; border: none; padding: 10px 20px;
+  border-radius: 8px; cursor: pointer; font-weight: 500; transition: opacity 0.2s; }
+#send:hover:not(:disabled) { opacity: 0.85; }
+#send:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.message {
-  margin-bottom: 24px;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.question {
-  background: ${accent};
-  color: white;
-  padding: 10px 16px;
-  border-radius: 18px;
-  display: inline-block;
-  margin-bottom: 12px;
-  max-width: 80%;
-}
-
-.answer {
-  line-height: 1.6;
-}
-
-.answer h1, .answer h2, .answer h3 {
-  margin: 20px 0 10px;
-  font-weight: 600;
-}
-
-.answer h2 { font-size: 20px; }
-.answer h3 { font-size: 16px; }
-
-.answer p {
-  margin: 12px 0;
-}
-
-.answer pre {
-  background: var(--vscode-textBlockQuote-background);
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 8px;
-  padding: 16px;
-  overflow-x: auto;
-  margin: 16px 0;
-}
-
-.answer code {
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-}
-
-.answer pre code {
-  background: none;
-  padding: 0;
-}
-
-.answer :not(pre) > code {
-  background: var(--vscode-textBlockQuote-background);
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: ${accent};
-}
-
-.answer strong {
-  font-weight: 600;
-}
-
-.answer a {
-  color: ${accent};
-  text-decoration: none;
-}
-
-.answer a:hover {
-  text-decoration: underline;
-}
-
-.loading {
-  display: none;
-  text-align: center;
-  padding: 20px;
-  color: var(--vscode-descriptionForeground);
-}
-
-.input-area {
-  border-top: 1px solid var(--vscode-panel-border);
-  padding: 16px 24px;
-  display: flex;
-  gap: 10px;
-}
-
-#input {
-  flex: 1;
-  background: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  border: 1px solid var(--vscode-input-border);
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-}
-
-#input:focus {
-  border-color: ${accent};
-}
-
-#send {
-  background: ${accent};
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: opacity 0.2s;
-}
-
-#send:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-#send:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* Scrollbar */
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-thumb { 
-  background: var(--vscode-scrollbarSlider-background);
-  border-radius: 4px;
-}
+::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 4px; }
 </style>
 </head>
+
 <body>
-
-<div class="header">
-  <span class="badge">${type.toUpperCase()}</span>
-  <span class="title">${escapeHtml(feature)}</span>
-</div>
-
-<div class="content" id="content">
-  <div class="message">
-    <div class="answer">${convertMarkdownToHtml(content)}</div>
+  <div class="header">
+    <span class="badge">${type.toUpperCase()}</span>
+    <span class="title">${escapeHtml(feature)}</span>
   </div>
-  <div class="loading" id="loading">Thinking...</div>
-</div>
 
-<div class="input-area">
-  <input 
-    type="text" 
-    id="input" 
-    placeholder="Ask a question..."
-  />
-  <button id="send">Send</button>
-</div>
+  <div class="content" id="content">
+    <div class="message"><div class="answer">${convertMarkdownToHtml(content)}</div></div>
+    <div class="loading" id="loading" style="display:none; text-align:center;">Thinking...</div>
+  </div>
+
+  <div class="input-area">
+    <input id="input" type="text" placeholder="Ask a question...">
+    <button id="send">Send</button>
+  </div>
 
 <script>
 const vscode = acquireVsCodeApi();
 
-document.getElementById('input').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') send();
-});
-
+document.getElementById('input').addEventListener('keypress', e => { if (e.key === 'Enter') send(); });
 document.getElementById('send').addEventListener('click', send);
 
 function send() {
   const input = document.getElementById('input');
   const text = input.value.trim();
   if (!text) return;
-
   vscode.postMessage({ command: 'askQuestion', text });
-  input.value = '';
-  input.disabled = true;
-  document.getElementById('send').disabled = true;
+  input.value = ''; input.disabled = true; document.getElementById('send').disabled = true;
 }
 
 window.addEventListener('message', event => {
@@ -476,30 +339,19 @@ window.addEventListener('message', event => {
   const input = document.getElementById('input');
   const send = document.getElementById('send');
 
-  if (command === 'showLoading') {
-    loading.style.display = 'block';
-  } 
+  if (command === 'showLoading') loading.style.display = 'block';
   else if (command === 'appendContent') {
     loading.style.display = 'none';
-    
     const msg = document.createElement('div');
     msg.className = 'message';
-    msg.innerHTML = \`
-      <div class="question">\${escapeHtml(question)}</div>
-      <div class="answer">\${convertMarkdown(text)}</div>
-    \`;
+    msg.innerHTML = \`<div class="question">\${escapeHtml(question)}</div>
+                      <div class="answer">\${convertMarkdown(text)}</div>\`;
     content.appendChild(msg);
     content.scrollTop = content.scrollHeight;
-    
-    input.disabled = false;
-    send.disabled = false;
-    input.focus();
-  } 
-  else if (command === 'showError') {
-    loading.style.display = 'none';
-    alert('Error: ' + text);
-    input.disabled = false;
-    send.disabled = false;
+    input.disabled = false; send.disabled = false; input.focus();
+  } else if (command === 'showError') {
+    loading.style.display = 'none'; alert('Error: ' + text);
+    input.disabled = false; send.disabled = false;
   }
 });
 
@@ -510,9 +362,8 @@ function escapeHtml(text) {
 
 function convertMarkdown(md) {
   if (!md) return '';
-  
   const blocks = [], codes = [];
-  let html = md
+  return md
     .replace(/\`\`\`[\\s\\S]*?\`\`\`/g, m => { blocks.push(m); return \`__B\${blocks.length-1}__\`; })
     .replace(/\`[^\`\\n]+\`/g, m => { codes.push(m); return \`__C\${codes.length-1}__\`; })
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
@@ -527,15 +378,13 @@ function convertMarkdown(md) {
       return m ? \`<pre><code>\${escapeHtml(m[2])}</code></pre>\` : blocks[i];
     })
     .replace(/__C(\\d+)__/g, (_, i) => \`<code>\${escapeHtml(codes[i].slice(1,-1))}</code>\`);
-  
-  return html;
 }
 </script>
 </body>
 </html>`;
 }
 
-module.exports = {
-  openChatbot,
-  getAlternatives
-};
+// ============================================================================
+// Exports
+// ============================================================================
+module.exports = { openChatbot, getAlternatives };
